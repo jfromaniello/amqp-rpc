@@ -75,6 +75,31 @@ class AMQPRPCServer extends AMQPEndpoint {
   }
 
   /**
+   * this is an internal method used to verify if the
+   * reply queue still exists, using a disposable channel.
+   *
+   * Extracted from rabbitmq documentation: https://www.rabbitmq.com/direct-reply-to.html
+   *
+   * If the RPC server is going to perform some expensive computation
+   * it might wish to check if the client has gone away. To do this the
+   * server can declare the generated reply name first on a disposable
+   * channel in order to determine whether it still exists.
+   */
+  async _verifyReplyQueue(queueName) {
+    const channel = await this._connection.createChannel();
+    let result = true;
+    try {
+      //we need to handle this error otherwise it breaks the application
+      channel.on('error', () => { result = false; });
+      await channel.checkQueue(queueName);
+    } catch(err) {
+      result = false;
+    }
+    await channel.close();
+    return result;
+  }
+
+  /**
    *
    * @private
    */
@@ -87,6 +112,12 @@ class AMQPRPCServer extends AMQPEndpoint {
 
     try {
       const result = await this._dispatchCommand(msg);
+      const replyQueueExists = await this._verifyReplyQueue(replyTo);
+      if (!replyQueueExists) {
+        //This means that the client has disposed the reply queue
+        //before we finished.
+        return;
+      }
 
       const content = new CommandResult(CommandResult.STATES.SUCCESS, result).pack();
       this._channel.sendToQueue(replyTo, content, {correlationId, persistent});
