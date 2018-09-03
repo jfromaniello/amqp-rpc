@@ -86,12 +86,19 @@ class AMQPRPCClient extends AMQPEndpoint {
    */
   async start() {
     await super.start();
-    if (this._params.repliesQueue === '') {
-      const response = await this._channel.assertQueue('', {exclusive: true});
-      this._repliesQueue = response.queue;
+
+    if (!this._repliesQueue) {
+      // https://www.rabbitmq.com/direct-reply-to.html
+      this._repliesQueue = 'amq.rabbitmq.reply-to';
+      await this._channel.assertQueue(this._repliesQueue);
     }
 
-    const consumeResult = await this._channel.consume(this._repliesQueue, (msg) => this._dispatchReply(msg));
+    const consumeOptions = { noAck: true };
+
+    const consumeResult = await this._channel.consume(this._repliesQueue,
+        (msg) => this._dispatchReply(msg),
+        consumeOptions);
+
     this._consumerTag = consumeResult.consumerTag
   }
 
@@ -120,7 +127,6 @@ class AMQPRPCClient extends AMQPEndpoint {
    * @returns {Promise}
    */
   async _dispatchReply(msg) {
-    this._channel.ack(msg);
     if (!msg) {
       //skip, it's queue close message
       return;

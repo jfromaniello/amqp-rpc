@@ -95,16 +95,11 @@ describe('AMQPRPCClient', () => {
 
     it('should create generated amqp queue with options', async () => {
       const client = new AMQPRPCClient(connectionStub, {requestsQueue: 'q'});
-      const queueStub = {
-        queue: 'q1'
-      };
-      channelStub.assertQueue = sinon.stub().returns(Promise.resolve(queueStub));
+      channelStub.assertQueue = sinon.stub().returns(Promise.resolve({}));
       await client.start();
       expect(channelStub.assertQueue).to.have.been.calledOnce
-        .and.calledWith('', {
-        exclusive: true
-      });
-      expect(client.repliesQueue).to.equal(queueStub.queue);
+        .and.calledWith('amq.rabbitmq.reply-to');
+      expect(client.repliesQueue).to.equal('amq.rabbitmq.reply-to');
     });
 
     it('should skip creating queue when params.queueName is set', async () => {
@@ -128,7 +123,7 @@ describe('AMQPRPCClient', () => {
       client._dispatchReply = sinon.stub();
       await client.start();
       expect(channelStub.consume).to.have.been.calledOnce
-        .and.calledWith(client.queueName, consumerMethod);
+        .and.calledWith(client._repliesQueue, consumerMethod, { noAck: true });
 
       const msg = {};
       consumerMethod(msg);
