@@ -56,6 +56,26 @@ describe('AMQPRPCClient to AMQPRPCServer', () => {
       expect(commandStub).to.have.callCount(1);
       expect(commandStub.getCall(0).args).to.deep.equal([]);
     });
+    it('should not invoke the command if client disconnects', async () => {
+      server._verifyReplyQueue = true;
+      const commandStub = sinon.stub();
+      server.addCommand('command', commandStub);
+
+      //disconnect the client when the req reaches 
+      //the server but before dispatching to the handler
+      server._handleMsg = (function(original) {
+        return async function(...args) {
+          await client.disconnect();
+          return await original.apply(server, args);
+        };
+      })(server._handleMsg);
+
+      await expect(client.sendCommand('command'))
+        .to.be.rejectedWith(Error)
+        .and.eventually.have.property('message', 'sendCommand canceled due to client disconnect, command:command, correlationId:0');
+
+      expect(commandStub).to.have.callCount(0);
+    });
     it('should delete timedout requests from map', async () => {
       server.addCommand('command', () => new Promise(sinon.stub()));
       await expect(client.sendCommand('command')).to.be.rejectedWith(Error);

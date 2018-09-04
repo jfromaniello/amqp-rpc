@@ -16,6 +16,7 @@ class AMQPRPCServer extends AMQPEndpoint {
    * @param {Object} params
    * @param {String} params.requestsQueue queue when AMQPRPC client sends commands, should correspond with AMQPRPCClient
    *    default is '' which means auto-generated queue name
+   * @param {Boolean} params.verifyReplyQueue verify that the reply queue exists before handling a request
    */
   constructor(connection, params = {}) {
     params.requestsQueue = params.requestsQueue || '';
@@ -24,6 +25,7 @@ class AMQPRPCServer extends AMQPEndpoint {
 
     this._requestsQueue = params.requestsQueue;
     this._commands = {};
+    this._verifyReplyQueue = params.verifyReplyQueue;
   }
 
   /**
@@ -75,6 +77,33 @@ class AMQPRPCServer extends AMQPEndpoint {
   }
 
   /**
+   * @private
+   *
+   * this is an internal method used to verify if the
+   * reply queue still exists by using a disposable channel.
+   *
+   * Extracted from rabbitmq documentation: https://www.rabbitmq.com/direct-reply-to.html
+   *
+   * If the RPC server is going to perform some expensive computation
+   * it might wish to check if the client has gone away. To do this the
+   * server can declare the generated reply name first on a disposable
+   * channel in order to determine whether it still exists.
+   */
+  async _checkQueue(queueName) {
+    const channel = await this._connection.createChannel();
+    let result = true;
+    try {
+      //we need to handle this error otherwise it breaks the application
+      channel.on('error', () => { result = false; });
+      await channel.checkQueue(queueName);
+    } catch(err) {
+      result = false;
+    }
+    await channel.close();
+    return result;
+  }
+
+  /**
    *
    * @private
    */
@@ -86,6 +115,15 @@ class AMQPRPCServer extends AMQPEndpoint {
     const persistent = msg.properties.deliveryMode !== 1;
 
     try {
+      if (this._verifyReplyQueue) {
+        const replyQueueExists = await this._checkQueue(replyTo);
+        if (!replyQueueExists) {
+          //This means that the client has disposed the reply queue
+          //before we finished.
+          return;
+        }
+      }
+
       const result = await this._dispatchCommand(msg);
 
       const content = new CommandResult(CommandResult.STATES.SUCCESS, result).pack();

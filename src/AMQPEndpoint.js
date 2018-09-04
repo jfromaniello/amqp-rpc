@@ -42,8 +42,9 @@ class AMQPEndpoint {
    */
   async disconnect() {
     if (!this._channel) return;
-    await this._channel.close();
+    const channel = this._channel;
     this._channel = null;
+    await channel.close();
   }
 }
 

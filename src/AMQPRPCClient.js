@@ -106,6 +106,9 @@ class AMQPRPCClient extends AMQPEndpoint {
    * @returns {Promise}
    */
   async disconnect() {
+    if (!this._channel) {
+      return;
+    }
     await this._channel.cancel(this._consumerTag);
 
     if (this._params.repliesQueue === '') {
