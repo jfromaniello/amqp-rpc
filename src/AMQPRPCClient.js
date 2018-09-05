@@ -17,7 +17,7 @@ class AMQPRPCClient extends AMQPEndpoint {
    * @param {String} params.requestsQueue queue for sending commands, should correspond with AMQPRPCServer
    * @param {String} [params.repliesQueue=''] queue for feedback from AMQPRPCServer,
    *    default is '' which means auto-generated queue name
-   * @param {Number} [params.timeout=60000] Timeout for cases when server is not responding
+   * @param {Number} [params.timeout=60000] Timeout for cases when server is not responding or too busy.
    * @param {Object} [params.defaultMessageOptions] additional options for publishing the request to the queue
    * @param {Object} [params.consumeOptions={}] Additional options to use in the channel.consume method
    */
@@ -54,7 +54,7 @@ class AMQPRPCClient extends AMQPEndpoint {
     const replyTo = this._repliesQueue;
     const timeout = this._params.timeout;
     const requestsQueue = this._params.requestsQueue;
-    const commonProperties = { replyTo, correlationId };
+    const commonProperties = { replyTo, correlationId, expiration: timeout };
 
     const properties = Object.assign({},
             messageOptions,

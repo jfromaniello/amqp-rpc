@@ -63,7 +63,7 @@ describe('AMQPRPCClient', () => {
       expect(channelStub.sendToQueue).to.have.been.calledOnce.and
         .calledWith('q',
           new Command('test').pack(),
-          { correlationId: "0", replyTo: "r", userId: 'john.doe' }
+          { correlationId: "0", replyTo: "r", userId: 'john.doe', expiration: 60000 }
         );
     });
 
@@ -73,7 +73,7 @@ describe('AMQPRPCClient', () => {
       expect(channelStub.sendToQueue).to.have.been.calledOnce.and
         .calledWith('q',
           new Command('test', [1, 'foo']).pack(),
-          { correlationId: "0", replyTo: "r", userId: 'john.doe' }
+          { correlationId: "0", replyTo: "r", userId: 'john.doe', expiration: 60000 }
         );
     });
 
@@ -83,7 +83,7 @@ describe('AMQPRPCClient', () => {
       expect(channelStub.sendToQueue).to.have.been.calledOnce.and
         .calledWith('q',
           new Command('test', [1, 'foo']).pack(),
-          { correlationId: "0", replyTo: "r", persistent: false, userId: 'john.doe' }
+          { correlationId: "0", replyTo: "r", persistent: false, userId: 'john.doe', expiration: 60000 }
         );
     });
 
