@@ -121,6 +121,24 @@ describe('AMQPRPCClient', () => {
       expect(client.repliesQueue).to.equal(repliesQueue);
     });
 
+    it('should use consumerOptions if provided', async () => {
+      const repliesQueue = 'qq';
+      const client = new AMQPRPCClient(connectionStub, {
+        repliesQueue,
+        requestsQueue: 'q',
+        consumeOptions: { noAck: true }
+      });
+      await client.start();
+      expect(channelStub.assertQueue).not.to.be.called;
+      expect(client.repliesQueue).to.equal(repliesQueue);
+      expect(channelStub.consume).to.be.calledOnce
+        .and.calledWithMatch(
+          sinon.match(repliesQueue),
+          sinon.match.func,
+          sinon.match({ noAck: true })
+        );
+    });
+
     it('should start listening from queue', async () => {
       const client = new AMQPRPCClient(connectionStub, {requestsQueue: 'q'});
       let consumerMethod;

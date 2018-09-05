@@ -19,6 +19,7 @@ class AMQPRPCClient extends AMQPEndpoint {
    *    default is '' which means auto-generated queue name
    * @param {Number} [params.timeout=60000] Timeout for cases when server is not responding
    * @param {Object} [params.defaultMessageOptions] additional options for publishing the request to the queue
+   * @param {Object} [params.consumeOptions={}] Additional options to use in the channel.consume method
    */
   constructor(connection, params = {}) {
     params.repliesQueue = params.repliesQueue || '';
@@ -32,6 +33,7 @@ class AMQPRPCClient extends AMQPEndpoint {
     this._repliesQueue = params.repliesQueue;
     this._cmdNumber = 0;
     this._requests = new Map();
+    this._consumeOptions = params.consumeOptions || {};
     this._defaultMessageOptions = params.defaultMessageOptions || {};
   }
 
@@ -96,7 +98,11 @@ class AMQPRPCClient extends AMQPEndpoint {
       this._repliesQueue = response.queue;
     }
 
-    const consumeResult = await this._channel.consume(this._repliesQueue, (msg) => this._dispatchReply(msg));
+    const consumeResult = await this._channel.consume(
+      this._repliesQueue,
+      (msg) => this._dispatchReply(msg),
+      this._consumeOptions);
+
     this._consumerTag = consumeResult.consumerTag
   }
 
@@ -125,7 +131,10 @@ class AMQPRPCClient extends AMQPEndpoint {
    * @returns {Promise}
    */
   async _dispatchReply(msg) {
-    this._channel.ack(msg);
+    if (!this._consumeOptions.noAck) {
+      this._channel.ack(msg);
+    }
+
     if (!msg) {
       //skip, it's queue close message
       return;
