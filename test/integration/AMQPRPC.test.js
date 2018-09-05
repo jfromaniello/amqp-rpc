@@ -10,6 +10,7 @@ const {AMQPRPCClient, AMQPRPCServer} = require('../..');
 const helpers = require('../helpers.js');
 
 const E_CUSTOM_ERROR_CODE = 'E_CUSTOM_ERROR_CODE';
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function getResultExample() {
   return {
@@ -137,6 +138,27 @@ describe('AMQPRPCClient to AMQPRPCServer', () => {
       await expect(client.sendCommand('command'))
         .to.be.rejectedWith(Error)
         .and.eventually.have.property('code', E_CUSTOM_ERROR_CODE);
+    });
+  });
+  describe('when client send multiples commands', () => {
+    it('should run the command method multiple times in parallel', async () => {
+      const results = [];
+      let times = 0;
+      server.addCommand('command', async () => {
+        const i = times++;
+        // first message is slower than second;
+        if (i === 0) {
+          await sleep(30);
+        }
+        results.push(i);
+      });
+
+      await Promise.all([
+          client.sendCommand('command'),
+          client.sendCommand('command')
+      ]);
+
+      expect(results).to.deep.equal([1, 0]);
     });
   });
 
