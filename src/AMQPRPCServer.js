@@ -17,6 +17,8 @@ class AMQPRPCServer extends AMQPEndpoint {
    * @param {String} params.requestsQueue queue when AMQPRPC client sends commands, should correspond with AMQPRPCClient
    *    default is '' which means auto-generated queue name
    * @param {Boolean} params.verifyReplyQueue verify that the reply queue exists before handling a request
+   * @param {String} params.prefetchCount specifies the number of commands that should be run in parallel
+   *    default is 0 which means unlimited
    */
   constructor(connection, params = {}) {
     params.requestsQueue = params.requestsQueue || '';
@@ -26,6 +28,7 @@ class AMQPRPCServer extends AMQPEndpoint {
     this._requestsQueue = params.requestsQueue;
     this._commands = {};
     this._verifyReplyQueue = params.verifyReplyQueue;
+    this._prefetchCount = params.prefetchCount || 0;
   }
 
   /**
@@ -39,8 +42,12 @@ class AMQPRPCServer extends AMQPEndpoint {
 
 
     if (this._requestsQueue === '') {
-      const response = await this._channel.assertQueue('', {exclusive: true});
+      const response = await this._channel.assertQueue('', { exclusive: true });
       this._requestsQueue = response.queue;
+    }
+
+    if (this._channel.prefetch && this._prefetchCount !== 0) {
+      await this._channel.prefetch(this._prefetchCount);
     }
 
     const consumeResult = await this._channel.consume(this._requestsQueue, (msg) => this._handleMsg(msg));
@@ -109,7 +116,6 @@ class AMQPRPCServer extends AMQPEndpoint {
    */
   async _handleMsg(msg) {
 
-    this._channel.ack(msg);
     const replyTo = msg.properties.replyTo;
     const correlationId = msg.properties.correlationId;
     const persistent = msg.properties.deliveryMode !== 1;
@@ -123,15 +129,16 @@ class AMQPRPCServer extends AMQPEndpoint {
           return;
         }
       }
-
       const result = await this._dispatchCommand(msg);
-
       const content = new CommandResult(CommandResult.STATES.SUCCESS, result).pack();
-      this._channel.sendToQueue(replyTo, content, {correlationId, persistent});
-
+      await this._channel.sendToQueue(replyTo, content, {correlationId, persistent});
+      await this._channel.ack(msg);
     } catch (error) {
-      const content = new CommandResult(CommandResult.STATES.ERROR, error).pack();
-      this._channel.sendToQueue(replyTo, content, {correlationId, persistent});
+      if (this._channel) {
+        const content = new CommandResult(CommandResult.STATES.ERROR, error).pack();
+        await this._channel.sendToQueue(replyTo, content, {correlationId, persistent});
+        await this._channel.reject(msg);
+      }
     }
   }
 
