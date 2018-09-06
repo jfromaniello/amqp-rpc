@@ -182,7 +182,7 @@ class AMQPRPCClient extends AMQPEndpoint {
    * @returns {Number}
    */
   static get TIMEOUT() {
-    return 60 * 1000;
+    return this._params.timeout
   }
 
   /**
