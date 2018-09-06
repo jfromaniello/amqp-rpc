@@ -24,6 +24,7 @@
     "cover": "istanbul cover node_modules/.bin/_mocha --  --require ./test/bootstrap.js --timeout 10000 --recursive --reporter nyan ./test/**/*.test.js"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.5.8",
     "amqplib": "0.5.1",
     "chai": "4.1.2",
     "chai-as-promised": "7.1.1",
