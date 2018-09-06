@@ -18,16 +18,16 @@ export namespace Options {
 }
 
 export interface AMQPRPCServer {
-  new(connection: Connection, params?: Options.Server);
+  new(connection: Connection, params?: Options.Server): any;
 
   disconnect(): Promise<void>;
   start(): Promise<void>;
-  addCommand(command: string, cb: Function);
+  addCommand(command: string, cb: Function): AMQPRPCServer;
   requestsQueue(): string;
 }
 
 export interface AMQPRPCClient {
-  new(connection: Connection, params: Options.Client)
+  new(connection: Connection, params: Options.Client): any;
 
   disconnect(): Promise<void>;
   start(): Promise<void>;
@@ -35,6 +35,6 @@ export interface AMQPRPCClient {
   repliesQueue(): string;
 
   sendCommand(command: string,
-    args?: Array,
+    args?: Array<any>,
     messageOptions?: AMQPOptions.Publish): Promise<any>
 }
