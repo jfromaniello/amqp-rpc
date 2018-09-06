@@ -1,4 +1,4 @@
-import { Channel, Connection, Options as AMQPOptions } from '@types/amqplib';
+import { Channel, Connection, Options as AMQPOptions } from 'amqplib';
 
 export namespace Options {
   export interface Server {
