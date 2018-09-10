@@ -17,8 +17,8 @@ export namespace Options {
 
 }
 
-export interface AMQPRPCServer {
-  new(connection: Connection, params?: Options.Server): any;
+declare class AMQPRPCServer {
+  constructor(connection: Connection, params?: Options.Server);
 
   disconnect(): Promise<void>;
   start(): Promise<void>;
@@ -27,7 +27,7 @@ export interface AMQPRPCServer {
 }
 
 export interface AMQPRPCClient {
-  new(connection: Connection, params: Options.Client): any;
+  constructor(connection: Connection, params: Options.Client);
 
   disconnect(): Promise<void>;
   start(): Promise<void>;
