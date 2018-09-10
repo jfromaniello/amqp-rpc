@@ -26,7 +26,7 @@ declare class AMQPRPCServer {
   requestsQueue(): string;
 }
 
-export interface AMQPRPCClient {
+declare class AMQPRPCClient {
   constructor(connection: Connection, params: Options.Client);
 
   disconnect(): Promise<void>;
