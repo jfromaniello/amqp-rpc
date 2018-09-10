@@ -4,7 +4,7 @@ export namespace Options {
   export interface Server {
     requestsQueue: string;
     verifyReplyQueue?: boolean;
-    prefetchCount?: string;
+    prefetchCount?: number;
   }
 
   export interface Client {
